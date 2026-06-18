@@ -179,13 +179,13 @@
     <div class="dropzone" id="dropzone"
       ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
       <input type="file" accept="video/*,image/*" onchange="onFileSelected(event)">
-      <div class="dropzone-icon">🎬</div>
-      <div class="dropzone-text"><strong>Arrastrá el video acá</strong> o hacé clic para seleccionar</div>
-      <div class="dropzone-hint">MP4, MOV, AVI — hasta ~100MB</div>
+      <div class="dropzone-icon" id="dropzoneIcon">📎</div>
+      <div class="dropzone-text"><strong>Arrastrá el archivo acá</strong> o hacé clic para seleccionar</div>
+      <div class="dropzone-hint">Video (MP4, MOV) · Imagen / Screenshot · o <strong>Cmd+V</strong> para pegar screenshot</div>
       <div class="file-selected" id="fileSelectedName"></div>
     </div>
     <div style="margin-top:10px;text-align:right">
-      <button class="btn-analyze" id="uploadBtn" onclick="analyzeFile()" disabled>Analizar video</button>
+      <button class="btn-analyze" id="uploadBtn" onclick="analyzeFile()" disabled>Analizar</button>
     </div>
   </div>
 </div>
@@ -313,6 +313,22 @@ async function analyzeUrl() {
 }
 
 document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') analyzeUrl(); });
+
+// Paste screenshot from clipboard (Cmd+V anywhere on page)
+document.addEventListener('paste', e => {
+  const items = e.clipboardData?.items || [];
+  for (const item of items) {
+    if (item.type.startsWith('image/')) {
+      const file = item.getAsFile();
+      if (file) {
+        switchTab('file');
+        setFile(file);
+        document.getElementById('dropzoneIcon').textContent = '🖼️';
+      }
+      break;
+    }
+  }
+});
 
 // ── ANALYZE VIA FILE UPLOAD (browser → Gemini direct) ──
 async function analyzeFile() {
