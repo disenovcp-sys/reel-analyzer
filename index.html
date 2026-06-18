@@ -17,12 +17,46 @@
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; padding: 24px 16px; }
 
-  .header { text-align: center; margin-bottom: 32px; }
+  .header { text-align: center; margin-bottom: 32px; position: relative; }
   .header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
   .header h1 span { color: var(--accent); }
   .header p { color: var(--muted); margin-top: 6px; font-size: 0.9rem; }
+  .settings-btn {
+    position: absolute; right: 0; top: 0;
+    background: none; border: 1px solid var(--border); color: var(--muted);
+    width: 36px; height: 36px; border-radius: 8px; cursor: pointer; font-size: 1rem;
+    display: flex; align-items: center; justify-content: center;
+    transition: all 0.2s;
+  }
+  .settings-btn:hover { border-color: var(--muted); color: var(--text); }
 
+  /* Settings panel */
+  .settings-panel {
+    display: none; max-width: 640px; margin: 0 auto 24px;
+    background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); padding: 20px;
+  }
+  .settings-panel.open { display: block; }
+  .settings-panel label { font-size: 0.8rem; color: var(--muted); display: block; margin-bottom: 6px; }
+  .settings-panel input {
+    width: 100%; background: var(--bg); border: 1px solid var(--border); color: var(--text);
+    padding: 10px 12px; border-radius: 8px; font-size: 0.9rem; outline: none;
+    font-family: monospace;
+  }
+  .settings-panel input:focus { border-color: var(--accent); }
+  .settings-hint { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+  .settings-hint a { color: var(--muted); }
+
+  /* Tabs */
   .input-area { max-width: 640px; margin: 0 auto 32px; }
+  .tabs { display: flex; gap: 4px; margin-bottom: 12px; }
+  .tab {
+    padding: 8px 16px; border-radius: 8px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; font-size: 0.85rem;
+    transition: all 0.2s;
+  }
+  .tab.active { background: var(--accent); color: #000; border-color: var(--accent); font-weight: 700; }
+
+  /* URL input */
   .url-row { display: flex; gap: 8px; }
   .url-row input {
     flex: 1; background: var(--card); border: 1px solid var(--border);
@@ -34,12 +68,26 @@
   .btn-analyze {
     background: var(--accent); color: #000; font-weight: 700;
     padding: 14px 24px; border: none; border-radius: var(--radius);
-    cursor: pointer; font-size: 0.95rem; white-space: nowrap;
-    transition: opacity 0.2s;
+    cursor: pointer; font-size: 0.95rem; white-space: nowrap; transition: opacity 0.2s;
   }
   .btn-analyze:hover { opacity: 0.88; }
   .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
 
+  /* File upload */
+  .dropzone {
+    border: 2px dashed var(--border); border-radius: var(--radius);
+    padding: 40px 20px; text-align: center; cursor: pointer;
+    transition: all 0.2s; position: relative;
+  }
+  .dropzone:hover, .dropzone.drag-over { border-color: var(--accent); background: #0f1300; }
+  .dropzone input[type=file] { position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%; }
+  .dropzone-icon { font-size: 2rem; margin-bottom: 8px; }
+  .dropzone-text { color: var(--muted); font-size: 0.9rem; }
+  .dropzone-text strong { color: var(--text); }
+  .dropzone-hint { font-size: 0.75rem; color: var(--muted); margin-top: 6px; }
+  .file-selected { color: var(--accent); font-size: 0.85rem; margin-top: 8px; }
+
+  /* Status & error */
   .status { max-width: 640px; margin: 0 auto 24px; }
   .status-msg {
     background: var(--card); border: 1px solid var(--border);
@@ -52,23 +100,17 @@
     animation: spin 0.8s linear infinite; flex-shrink: 0;
   }
   @keyframes spin { to { transform: rotate(360deg); } }
-
   .error-msg {
     background: #1a0808; border: 1px solid #3a1010;
-    border-radius: var(--radius); padding: 14px 18px;
-    color: #ff7070; font-size: 0.9rem;
+    border-radius: var(--radius); padding: 14px 18px; color: #ff7070; font-size: 0.9rem;
   }
 
+  /* Analysis cards */
   .analyses { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
-
-  .analysis-card {
-    background: var(--card); border: 1px solid var(--border);
-    border-radius: var(--radius); overflow: hidden;
-  }
+  .analysis-card { background: var(--card); border: 1px solid var(--border); border-radius: var(--radius); overflow: hidden; }
   .card-header {
     display: flex; justify-content: space-between; align-items: center;
-    padding: 16px 20px; border-bottom: 1px solid var(--border);
-    flex-wrap: wrap; gap: 8px;
+    padding: 16px 20px; border-bottom: 1px solid var(--border); flex-wrap: wrap; gap: 8px;
   }
   .card-url { font-size: 0.8rem; color: var(--muted); word-break: break-all; }
   .card-url a { color: var(--muted); text-decoration: none; }
@@ -79,26 +121,18 @@
     text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
   }
   .card-body { padding: 20px; display: grid; gap: 20px; }
-
   .section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
-
   .hook-block { background: #0f1300; border: 1px solid #2a3000; border-radius: 8px; padding: 16px; }
   .hook-type-label { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
   .hook-breakdown { font-size: 0.88rem; color: #ccc; line-height: 1.6; }
-
   .narrative-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
   .nar-item { background: #0d0d0d; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
   .nar-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 4px; }
   .nar-text { font-size: 0.82rem; color: #ddd; line-height: 1.5; }
-
   .insight-block { font-size: 0.88rem; color: #ccc; line-height: 1.6; }
-
-  .vcp-block {
-    background: #0d0f00; border: 1px solid #2a2e00; border-radius: 8px; padding: 16px;
-  }
+  .vcp-block { background: #0d0f00; border: 1px solid #2a2e00; border-radius: 8px; padding: 16px; }
   .vcp-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; }
   .vcp-text { font-size: 0.88rem; color: #ddd; line-height: 1.6; }
-
   .card-actions { padding: 0 20px 16px; display: flex; gap: 8px; }
   .btn-sm {
     font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
@@ -106,21 +140,53 @@
   }
   .btn-sm:hover { border-color: var(--muted); color: var(--text); }
   .btn-sm.danger:hover { border-color: #ff4444; color: #ff4444; }
-
   .empty { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 0.9rem; }
+
+  .progress-bar { height: 3px; background: var(--border); border-radius: 2px; margin-top: 10px; overflow: hidden; }
+  .progress-fill { height: 100%; background: var(--accent); transition: width 0.3s; border-radius: 2px; }
 </style>
 </head>
 <body>
 
 <div class="header">
   <h1>Reel <span>Analyzer</span></h1>
-  <p>Pegá el link de un reel → análisis automático del video con IA</p>
+  <p>Analizá reels de referencia con IA — qué hook usan y cómo adaptarlo a VCP</p>
+  <button class="settings-btn" onclick="toggleSettings()" title="Configuración">⚙️</button>
+</div>
+
+<div class="settings-panel" id="settingsPanel">
+  <label>Gemini API Key (solo necesaria para subir archivo)</label>
+  <input type="password" id="geminiKey" placeholder="AQ..." oninput="saveKey()">
+  <div class="settings-hint">
+    Conseguí tu key gratis en <a href="https://aistudio.google.com/app/apikey" target="_blank">aistudio.google.com/app/apikey</a> — se guarda solo en tu navegador.
+  </div>
 </div>
 
 <div class="input-area">
-  <div class="url-row">
-    <input type="url" id="urlInput" placeholder="https://www.instagram.com/reel/..." autocomplete="off">
-    <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">Analizar</button>
+  <div class="tabs">
+    <button class="tab active" id="tabUrl" onclick="switchTab('url')">🔗 Pegar link</button>
+    <button class="tab" id="tabFile" onclick="switchTab('file')">📁 Subir video</button>
+  </div>
+
+  <div id="panelUrl">
+    <div class="url-row">
+      <input type="url" id="urlInput" placeholder="https://www.instagram.com/reel/..." autocomplete="off">
+      <button class="btn-analyze" id="analyzeBtn" onclick="analyzeUrl()">Analizar</button>
+    </div>
+  </div>
+
+  <div id="panelFile" style="display:none">
+    <div class="dropzone" id="dropzone"
+      ondragover="onDragOver(event)" ondragleave="onDragLeave(event)" ondrop="onDrop(event)">
+      <input type="file" accept="video/*,image/*" onchange="onFileSelected(event)">
+      <div class="dropzone-icon">🎬</div>
+      <div class="dropzone-text"><strong>Arrastrá el video acá</strong> o hacé clic para seleccionar</div>
+      <div class="dropzone-hint">MP4, MOV, AVI — hasta ~100MB</div>
+      <div class="file-selected" id="fileSelectedName"></div>
+    </div>
+    <div style="margin-top:10px;text-align:right">
+      <button class="btn-analyze" id="uploadBtn" onclick="analyzeFile()" disabled>Analizar video</button>
+    </div>
   </div>
 </div>
 
@@ -138,7 +204,6 @@ const HOOK_LABELS = {
   identificacion: 'Identificación',
   otro: 'Otro',
 };
-
 const NAR_LABELS = {
   hook: '🎣 Hook',
   contexto: '📍 Contexto',
@@ -148,62 +213,245 @@ const NAR_LABELS = {
 };
 
 let analyses = JSON.parse(localStorage.getItem('reel_analyses') || '[]');
+let selectedFile = null;
 
-function save() {
-  localStorage.setItem('reel_analyses', JSON.stringify(analyses));
+// Settings
+function toggleSettings() {
+  document.getElementById('settingsPanel').classList.toggle('open');
+  document.getElementById('geminiKey').value = localStorage.getItem('gemini_key') || '';
+}
+function saveKey() {
+  localStorage.setItem('gemini_key', document.getElementById('geminiKey').value.trim());
 }
 
-function setStatus(msg) {
+// Tabs
+function switchTab(tab) {
+  document.getElementById('tabUrl').classList.toggle('active', tab === 'url');
+  document.getElementById('tabFile').classList.toggle('active', tab === 'file');
+  document.getElementById('panelUrl').style.display = tab === 'url' ? '' : 'none';
+  document.getElementById('panelFile').style.display = tab === 'file' ? '' : 'none';
+}
+
+// Drag & drop
+function onDragOver(e) { e.preventDefault(); document.getElementById('dropzone').classList.add('drag-over'); }
+function onDragLeave(e) { document.getElementById('dropzone').classList.remove('drag-over'); }
+function onDrop(e) {
+  e.preventDefault();
+  document.getElementById('dropzone').classList.remove('drag-over');
+  const file = e.dataTransfer.files[0];
+  if (file) setFile(file);
+}
+function onFileSelected(e) { if (e.target.files[0]) setFile(e.target.files[0]); }
+function setFile(file) {
+  selectedFile = file;
+  document.getElementById('fileSelectedName').textContent = file.name;
+  document.getElementById('uploadBtn').disabled = false;
+}
+
+// UI helpers
+function setStatus(msg, progress) {
   const area = document.getElementById('statusArea');
   if (!msg) { area.style.display = 'none'; return; }
   area.style.display = 'block';
-  area.innerHTML = `<div class="status-msg"><div class="spinner"></div><span>${msg}</span></div>`;
+  const bar = progress != null ? `<div class="progress-bar"><div class="progress-fill" style="width:${progress}%"></div></div>` : '';
+  area.innerHTML = `<div class="status-msg"><div class="spinner"></div><div style="flex:1"><span>${msg}</span>${bar}</div></div>`;
 }
-
 function setError(msg) {
   document.getElementById('errorArea').innerHTML = msg
     ? `<div class="error-msg">⚠️ ${msg}</div>` : '';
 }
+function save() { localStorage.setItem('reel_analyses', JSON.stringify(analyses)); }
 
-async function analyze() {
+// ── ANALYZE VIA URL (server-side) ──
+async function analyzeUrl() {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return;
-
   const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
   setError('');
   setStatus('Descargando video de Instagram…');
-
   try {
     const res = await fetch('/api/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     });
-
-    setStatus('Analizando video con Gemini…');
-
+    setStatus('Analizando con Gemini…');
     if (!res.ok) {
       const d = await res.json().catch(() => ({}));
       throw new Error(d.error || `Error ${res.status}`);
     }
-
     const data = await res.json();
-    analyses.unshift({ url, ts: Date.now(), ...data });
-    save();
-    render();
+    pushAnalysis(url, data);
     document.getElementById('urlInput').value = '';
   } catch (e) {
-    setError(e.message);
+    setError(e.message + (e.message.includes('bloqueado') ? '<br><br>👉 Probá con la opción <strong>"Subir video"</strong> arriba.' : ''));
   } finally {
     setStatus(null);
     btn.disabled = false;
   }
 }
 
-document.getElementById('urlInput').addEventListener('keydown', e => {
-  if (e.key === 'Enter') analyze();
-});
+document.getElementById('urlInput').addEventListener('keydown', e => { if (e.key === 'Enter') analyzeUrl(); });
+
+// ── ANALYZE VIA FILE UPLOAD (browser → Gemini direct) ──
+async function analyzeFile() {
+  const key = localStorage.getItem('gemini_key') || '';
+  if (!key) {
+    setError('Necesitás configurar tu Gemini API key primero — hacé clic en ⚙️ arriba.');
+    return;
+  }
+  if (!selectedFile) return;
+
+  const btn = document.getElementById('uploadBtn');
+  btn.disabled = true;
+  setError('');
+
+  try {
+    // Step 1: Upload to Gemini File API
+    setStatus('Subiendo video a Gemini…', 10);
+    const fileUri = await uploadToGeminiDirect(selectedFile, key, (pct) => {
+      setStatus(`Subiendo video a Gemini… ${pct}%`, pct);
+    });
+
+    // Step 2: Wait for processing
+    setStatus('Procesando video…', 80);
+    const mimeType = selectedFile.type || 'video/mp4';
+    const isImage = mimeType.startsWith('image/');
+    if (!isImage) await waitActiveClient(fileUri, key);
+
+    // Step 3: Analyze
+    setStatus('Analizando con Gemini…', 90);
+    const analysis = await analyzeWithGeminiClient(fileUri, mimeType, isImage, key);
+    pushAnalysis(selectedFile.name, analysis);
+    selectedFile = null;
+    document.getElementById('fileSelectedName').textContent = '';
+    btn.disabled = true;
+  } catch (e) {
+    setError(e.message);
+    btn.disabled = false;
+  } finally {
+    setStatus(null);
+  }
+}
+
+async function uploadToGeminiDirect(file, key, onProgress) {
+  const bytes = await file.arrayBuffer();
+  const buf = new Uint8Array(bytes);
+
+  // Initiate resumable upload
+  const initRes = await fetch(
+    `https://generativelanguage.googleapis.com/upload/v1beta/files?key=${key}&uploadType=resumable`,
+    {
+      method: 'POST',
+      headers: {
+        'X-Goog-Upload-Protocol': 'resumable',
+        'X-Goog-Upload-Command': 'start',
+        'X-Goog-Upload-Header-Content-Length': buf.byteLength,
+        'X-Goog-Upload-Header-Content-Type': file.type || 'video/mp4',
+        'Content-Type': 'application/json',
+      },
+      body: JSON.stringify({ file: { displayName: file.name } }),
+    }
+  );
+  if (!initRes.ok) {
+    const err = await initRes.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Gemini upload init failed: ${initRes.status}. Verificá que la API key sea correcta.`);
+  }
+  const uploadUrl = initRes.headers.get('x-goog-upload-url');
+  if (!uploadUrl) throw new Error('No se obtuvo URL de upload de Gemini.');
+
+  onProgress && onProgress(30);
+
+  // Upload bytes
+  const uploadRes = await fetch(uploadUrl, {
+    method: 'POST',
+    headers: {
+      'Content-Length': buf.byteLength,
+      'X-Goog-Upload-Offset': '0',
+      'X-Goog-Upload-Command': 'upload, finalize',
+    },
+    body: buf,
+  });
+  if (!uploadRes.ok) throw new Error(`Gemini upload failed: ${uploadRes.status}`);
+  const fileData = await uploadRes.json();
+  onProgress && onProgress(70);
+  return (fileData.file || fileData).uri;
+}
+
+async function waitActiveClient(fileUri, key) {
+  const name = fileUri.split('/files/')[1];
+  for (let i = 0; i < 20; i++) {
+    const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/files/${name}?key=${key}`);
+    if (!r.ok) throw new Error(`File status check failed: ${r.status}`);
+    const f = await r.json();
+    if (f.state === 'ACTIVE') return;
+    if (f.state === 'FAILED') throw new Error('Gemini no pudo procesar el video.');
+    await new Promise(res => setTimeout(res, 2000));
+  }
+  throw new Error('Tiempo de espera agotado procesando el video.');
+}
+
+async function analyzeWithGeminiClient(fileUri, mimeType, isImage, key) {
+  const mediaType = isImage ? 'imagen' : 'video';
+  const prompt = buildPrompt(mediaType);
+  const r = await fetch(
+    `https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${key}`,
+    {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        contents: [{ parts: [
+          { file_data: { mime_type: mimeType, file_uri: fileUri } },
+          { text: prompt },
+        ]}],
+        generationConfig: { temperature: 0.4, maxOutputTokens: 1500 },
+      }),
+    }
+  );
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));
+    throw new Error(err?.error?.message || `Gemini API error ${r.status}`);
+  }
+  const data = await r.json();
+  const text = data.candidates?.[0]?.content?.parts?.[0]?.text || '';
+  const m = text.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error('Respuesta inesperada de Gemini.');
+  return JSON.parse(m[0]);
+}
+
+function buildPrompt(mediaType) {
+  return `Analizá este ${mediaType} de referencia para benchmarking de contenido de una marca de ropa urbana argentina llamada Van Como Pina (VCP).
+
+Observá el ${mediaType} completo y analizá:
+- El hook visual y auditivo de los primeros segundos
+- La estructura narrativa completa
+- Por qué generó engagement
+- Qué elementos son adaptables a VCP
+
+Respondé ÚNICAMENTE con un objeto JSON válido (sin texto antes ni después, sin bloques de código markdown):
+{
+  "hook_type": "curiosity_gap | dato_contraintuitivo | promesa_revelacion | conflicto | identificacion | otro",
+  "hook_breakdown": "descripción concreta del hook en 2-3 oraciones",
+  "narrative_structure": {
+    "hook": "qué pasa en los primeros 1-3 segundos",
+    "contexto": "cómo establece el contexto",
+    "tension": "qué tensión genera para mantener la atención",
+    "resolucion": "cómo resuelve o desenlaza",
+    "cta": "cierre y llamado a la acción si existe"
+  },
+  "visual_elements": "elementos visuales clave: estética, colores, montaje, texto en pantalla, audio",
+  "why_it_worked": "hipótesis de por qué generó engagement",
+  "vcp_adaptation": "cómo adaptar este mecanismo a un reel de VCP (ropa urbana argentina, target 18-35 años)"
+}`;
+}
+
+// ── RENDER ──
+function pushAnalysis(label, data) {
+  analyses.unshift({ label, ts: Date.now(), ...data });
+  save();
+  render();
+}
 
 function deleteEntry(idx) {
   if (!confirm('¿Eliminar este análisis?')) return;
@@ -219,27 +467,25 @@ function esc(str) {
 function render() {
   const container = document.getElementById('analyses');
   if (!analyses.length) {
-    container.innerHTML = '<div class="empty">Todavía no analizaste ningún reel.<br>Pegá un link arriba y presioná Analizar.</div>';
+    container.innerHTML = '<div class="empty">Todavía no analizaste ningún reel.<br>Pegá un link o subí un video arriba.</div>';
     return;
   }
-
   container.innerHTML = analyses.map((a, i) => {
     const hookLabel = HOOK_LABELS[a.hook_type] || a.hook_type || '—';
     const narItems = Object.entries(NAR_LABELS).map(([key, label]) => {
       const val = a.narrative_structure?.[key] || '—';
       return `<div class="nar-item"><div class="nar-label">${label}</div><div class="nar-text">${esc(val)}</div></div>`;
     }).join('');
-
-    const visualBlock = a.visual_elements ? `
-      <div>
-        <div class="section-title">Elementos visuales</div>
-        <div class="insight-block">${esc(a.visual_elements)}</div>
-      </div>` : '';
-
+    const visualBlock = a.visual_elements
+      ? `<div><div class="section-title">Elementos visuales</div><div class="insight-block">${esc(a.visual_elements)}</div></div>` : '';
+    const isUrl = a.label && a.label.startsWith('http');
+    const labelHtml = isUrl
+      ? `<a href="${esc(a.label)}" target="_blank" rel="noopener">${esc(a.label)}</a>${a.isImage ? ' <span style="color:#888">(imagen)</span>' : ''}`
+      : esc(a.label || '');
     return `
     <div class="analysis-card">
       <div class="card-header">
-        <div class="card-url"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.url)}</a>${a.isImage ? ' <span style="color:#888">(imagen)</span>' : ''}</div>
+        <div class="card-url">${labelHtml}</div>
         <div class="card-badge">${esc(hookLabel)}</div>
       </div>
       <div class="card-body">
