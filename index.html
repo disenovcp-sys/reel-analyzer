@@ -4,299 +4,271 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Reel Analyzer — VCP</title>
-<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🎞</text></svg>">
 <style>
-:root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:rgba(255,255,255,0.07);--purple:#a78bfa;--blue:#8ab4f8;--green:#6ee7b7;--yellow:#fcd34d;--orange:#fb923c;--red:#f87171;--text:#e8e8f0;--muted:#6b6b80;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;padding:32px 20px;max-width:860px;margin:0 auto;}
-@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+  :root {
+    --bg: #0a0a0a;
+    --card: #111;
+    --border: #222;
+    --accent: #e8ff3b;
+    --text: #f0f0f0;
+    --muted: #888;
+    --radius: 12px;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body { background: var(--bg); color: var(--text); font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif; min-height: 100vh; padding: 24px 16px; }
 
-/* Header */
-.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;}
-h1{font-size:22px;font-weight:600;}
-.subtitle{color:var(--muted);font-size:13px;margin-top:3px;}
-.btn-ghost{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap;}
-.btn-ghost:hover{border-color:var(--purple);color:var(--purple);}
+  .header { text-align: center; margin-bottom: 32px; }
+  .header h1 { font-size: 1.8rem; font-weight: 700; letter-spacing: -0.5px; }
+  .header h1 span { color: var(--accent); }
+  .header p { color: var(--muted); margin-top: 6px; font-size: 0.9rem; }
 
-/* URL input */
-.url-form{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px;}
-.url-row{display:flex;gap:10px;}
-.url-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px 16px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;}
-.url-input:focus{border-color:var(--purple);}
-.url-input::placeholder{color:var(--muted);}
-.btn-primary{background:var(--purple);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s;white-space:nowrap;}
-.btn-primary:hover{opacity:.85;}
-.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
-.url-status{margin-top:12px;font-size:12px;color:var(--muted);min-height:16px;}
-.url-status.error{color:var(--red);}
+  .input-area { max-width: 640px; margin: 0 auto 32px; }
+  .url-row { display: flex; gap: 8px; }
+  .url-row input {
+    flex: 1; background: var(--card); border: 1px solid var(--border);
+    color: var(--text); padding: 14px 16px; border-radius: var(--radius);
+    font-size: 0.95rem; outline: none; transition: border 0.2s;
+  }
+  .url-row input:focus { border-color: var(--accent); }
+  .url-row input::placeholder { color: var(--muted); }
+  .btn-analyze {
+    background: var(--accent); color: #000; font-weight: 700;
+    padding: 14px 24px; border: none; border-radius: var(--radius);
+    cursor: pointer; font-size: 0.95rem; white-space: nowrap;
+    transition: opacity 0.2s;
+  }
+  .btn-analyze:hover { opacity: 0.88; }
+  .btn-analyze:disabled { opacity: 0.4; cursor: not-allowed; }
 
-/* Caption fallback */
-.caption-fallback{margin-top:14px;display:none;}
-.caption-fallback label{font-size:11px;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace;}
-.caption-fallback textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:80px;transition:border-color .2s;}
-.caption-fallback textarea:focus{border-color:var(--purple);}
-.caption-fallback .btn-sm{margin-top:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;}
-.caption-fallback .btn-sm:hover{border-color:var(--purple);color:var(--purple);}
+  .status { max-width: 640px; margin: 0 auto 24px; }
+  .status-msg {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); padding: 16px 20px;
+    display: flex; align-items: center; gap: 12px; font-size: 0.9rem;
+  }
+  .spinner {
+    width: 18px; height: 18px; border: 2px solid var(--border);
+    border-top-color: var(--accent); border-radius: 50%;
+    animation: spin 0.8s linear infinite; flex-shrink: 0;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
 
-/* Hook type badges */
-.hook-badge{display:inline-block;font-size:10px;padding:3px 10px;border-radius:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;font-family:'DM Mono',monospace;}
-.hook-curiosity_gap{background:rgba(167,139,250,.15);color:var(--purple);}
-.hook-dato_contraintuitivo{background:rgba(248,113,113,.15);color:var(--red);}
-.hook-promesa_revelacion{background:rgba(110,231,183,.15);color:var(--green);}
-.hook-conflicto{background:rgba(251,146,60,.15);color:var(--orange);}
-.hook-identificacion{background:rgba(138,180,248,.15);color:var(--blue);}
-.hook-otro{background:rgba(107,107,128,.15);color:var(--muted);}
+  .error-msg {
+    background: #1a0808; border: 1px solid #3a1010;
+    border-radius: var(--radius); padding: 14px 18px;
+    color: #ff7070; font-size: 0.9rem;
+  }
 
-const HOOK_LABELS={curiosity_gap:'Curiosity gap',dato_contraintuitivo:'Dato contraintuitivo',promesa_revelacion:'Promesa revelación',conflicto:'Conflicto',identificacion:'Identificación',otro:'Otro'};
+  .analyses { max-width: 900px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
 
-/* Cards */
-.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
-.section-header h2{font-size:15px;font-weight:600;}
-.count{font-size:12px;color:var(--muted);}
-.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;line-height:1.6;}
-.cards{display:flex;flex-direction:column;gap:12px;}
+  .analysis-card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: var(--radius); overflow: hidden;
+  }
+  .card-header {
+    display: flex; justify-content: space-between; align-items: center;
+    padding: 16px 20px; border-bottom: 1px solid var(--border);
+    flex-wrap: wrap; gap: 8px;
+  }
+  .card-url { font-size: 0.8rem; color: var(--muted); word-break: break-all; }
+  .card-url a { color: var(--muted); text-decoration: none; }
+  .card-url a:hover { color: var(--text); }
+  .card-badge {
+    font-size: 0.75rem; font-weight: 700; padding: 4px 10px;
+    border-radius: 20px; background: #1a1f00; color: var(--accent);
+    text-transform: uppercase; letter-spacing: 0.5px; flex-shrink: 0;
+  }
+  .card-body { padding: 20px; display: grid; gap: 20px; }
 
-.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
-.card:hover{border-color:rgba(167,139,250,.2);}
-.card-top{display:grid;grid-template-columns:auto 1fr auto;gap:14px;padding:16px 18px;cursor:pointer;align-items:start;}
-.card-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--surface2);flex-shrink:0;}
-.card-thumb-placeholder{width:56px;height:56px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
-.card-info{min-width:0;}
-.card-account{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:5px;}
-.card-preview{font-size:13px;font-weight:500;line-height:1.4;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.card-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
-.card-date{font-size:11px;color:var(--muted);}
-.card-link{font-size:11px;color:var(--muted);text-decoration:none;}
-.card-link:hover{color:var(--purple);}
-.card-actions{display:flex;gap:6px;align-items:center;}
-.btn-del{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;transition:all .2s;}
-.btn-del:hover{border-color:var(--red);color:var(--red);}
-.chevron{font-size:12px;color:var(--muted);transition:transform .2s;display:block;}
-.chevron.open{transform:rotate(180deg);}
+  .section-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--muted); margin-bottom: 8px; }
 
-.card-body{border-top:1px solid var(--border);padding:18px 20px;display:none;}
-.card-body.open{display:block;}
-.section{margin-bottom:16px;}
-.section:last-child{margin-bottom:0;}
-.slabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:6px;}
-.stext{font-size:13px;color:var(--text);line-height:1.6;}
-.narrative{display:flex;flex-direction:column;gap:6px;}
-.nrow{display:flex;gap:12px;font-size:13px;}
-.nlabel{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;white-space:nowrap;padding-top:2px;min-width:85px;}
-.vcp-box{background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:14px 16px;}
-.vcp-box .slabel{color:var(--purple);}
+  .hook-block { background: #0f1300; border: 1px solid #2a3000; border-radius: 8px; padding: 16px; }
+  .hook-type-label { font-size: 1rem; font-weight: 700; color: var(--accent); margin-bottom: 6px; }
+  .hook-breakdown { font-size: 0.88rem; color: #ccc; line-height: 1.6; }
 
-/* Spinner */
-@keyframes spin{to{transform:rotate(360deg)}}
-.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(167,139,250,.3);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+  .narrative-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+  .nar-item { background: #0d0d0d; border: 1px solid var(--border); border-radius: 8px; padding: 12px; }
+  .nar-label { font-size: 0.65rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.8px; color: var(--muted); margin-bottom: 4px; }
+  .nar-text { font-size: 0.82rem; color: #ddd; line-height: 1.5; }
+
+  .insight-block { font-size: 0.88rem; color: #ccc; line-height: 1.6; }
+
+  .vcp-block {
+    background: #0d0f00; border: 1px solid #2a2e00; border-radius: 8px; padding: 16px;
+  }
+  .vcp-title { font-size: 0.7rem; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--accent); margin-bottom: 8px; }
+  .vcp-text { font-size: 0.88rem; color: #ddd; line-height: 1.6; }
+
+  .card-actions { padding: 0 20px 16px; display: flex; gap: 8px; }
+  .btn-sm {
+    font-size: 0.78rem; padding: 6px 12px; border-radius: 6px; border: 1px solid var(--border);
+    background: transparent; color: var(--muted); cursor: pointer; transition: all 0.2s;
+  }
+  .btn-sm:hover { border-color: var(--muted); color: var(--text); }
+  .btn-sm.danger:hover { border-color: #ff4444; color: #ff4444; }
+
+  .empty { text-align: center; color: var(--muted); padding: 60px 20px; font-size: 0.9rem; }
 </style>
 </head>
 <body>
 
 <div class="header">
-  <div>
-    <h1>🎞 Reel Analyzer</h1>
-    <p class="subtitle">Pegá un link de Instagram — se analiza solo.</p>
-  </div>
+  <h1>Reel <span>Analyzer</span></h1>
+  <p>Pegá el link de un reel → análisis automático del video con IA</p>
 </div>
 
-<div class="url-form">
+<div class="input-area">
   <div class="url-row">
-    <input class="url-input" id="urlInput" type="url" placeholder="https://www.instagram.com/reel/..."
-      onkeydown="if(event.key==='Enter')submitUrl()">
-    <button class="btn-primary" id="submitBtn" onclick="submitUrl()">Analizar</button>
-  </div>
-  <div class="url-status" id="urlStatus"></div>
-
-  <div class="caption-fallback" id="captionFallback">
-    <label>No encontré la caption automáticamente — pegala acá:</label>
-    <textarea id="captionInput" placeholder="Copiá la caption del reel de Instagram y pegala acá..."></textarea>
-    <button class="btn-sm" onclick="runAnalysis()">Analizar con esta caption</button>
+    <input type="url" id="urlInput" placeholder="https://www.instagram.com/reel/..." autocomplete="off">
+    <button class="btn-analyze" id="analyzeBtn" onclick="analyze()">Analizar</button>
   </div>
 </div>
 
-<div class="section-header">
-  <h2>Referencias</h2>
-  <span class="count" id="countEl"></span>
-</div>
-<div id="cardsList"></div>
+<div class="status" id="statusArea" style="display:none"></div>
+<div id="errorArea" style="max-width:640px;margin:0 auto 20px;"></div>
+
+<div class="analyses" id="analyses"></div>
 
 <script>
-const STORAGE_KEY = 'reel_analyzer_v2';
 const HOOK_LABELS = {
-  curiosity_gap:'Curiosity gap', dato_contraintuitivo:'Dato contraintuitivo',
-  promesa_revelacion:'Promesa revelación', conflicto:'Conflicto',
-  identificacion:'Identificación', otro:'Otro'
+  curiosity_gap: 'Curiosity Gap',
+  dato_contraintuitivo: 'Dato Contraintuitivo',
+  promesa_revelacion: 'Promesa / Revelación',
+  conflicto: 'Conflicto',
+  identificacion: 'Identificación',
+  otro: 'Otro',
 };
 
-let reels = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
-let pendingData = null; // scraped data waiting for manual caption
+const NAR_LABELS = {
+  hook: '🎣 Hook',
+  contexto: '📍 Contexto',
+  tension: '⚡ Tensión',
+  resolucion: '✅ Resolución',
+  cta: '📢 CTA',
+};
 
-function setStatus(msg, isError) {
-  const el = document.getElementById('urlStatus');
-  el.innerHTML = msg;
-  el.className = 'url-status' + (isError ? ' error' : '');
+let analyses = JSON.parse(localStorage.getItem('reel_analyses') || '[]');
+
+function save() {
+  localStorage.setItem('reel_analyses', JSON.stringify(analyses));
 }
 
-async function submitUrl() {
+function setStatus(msg) {
+  const area = document.getElementById('statusArea');
+  if (!msg) { area.style.display = 'none'; return; }
+  area.style.display = 'block';
+  area.innerHTML = `<div class="status-msg"><div class="spinner"></div><span>${msg}</span></div>`;
+}
+
+function setError(msg) {
+  document.getElementById('errorArea').innerHTML = msg
+    ? `<div class="error-msg">⚠️ ${msg}</div>` : '';
+}
+
+async function analyze() {
   const url = document.getElementById('urlInput').value.trim();
   if (!url) return;
 
-  const btn = document.getElementById('submitBtn');
+  const btn = document.getElementById('analyzeBtn');
   btn.disabled = true;
-  document.getElementById('captionFallback').style.display = 'none';
-  setStatus('<span class="spinner"></span>Scrapeando Instagram...');
+  setError('');
+  setStatus('Descargando video de Instagram…');
 
   try {
-    const r = await fetch('/api/scrape', {
+    const res = await fetch('/api/process', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ url }),
     });
-    const scraped = await r.json();
-    if (scraped.error) throw new Error(scraped.error);
 
-    pendingData = scraped;
+    setStatus('Analizando video con Gemini…');
 
-    if (scraped.caption) {
-      setStatus('<span class="spinner"></span>Caption encontrada — analizando...');
-      await runAnalysis();
-    } else {
-      setStatus('⚠️ No pude extraer la caption automáticamente.');
-      document.getElementById('captionFallback').style.display = 'block';
-      document.getElementById('captionInput').focus();
-      btn.disabled = false;
+    if (!res.ok) {
+      const d = await res.json().catch(() => ({}));
+      throw new Error(d.error || `Error ${res.status}`);
     }
-  } catch(e) {
-    setStatus('❌ ' + e.message, true);
-    btn.disabled = false;
-  }
-}
 
-async function runAnalysis() {
-  if (!pendingData) {
-    // Called from fallback button
-    const url = document.getElementById('urlInput').value.trim();
-    pendingData = { url, account: '', caption: '', thumbnail: '' };
-  }
-
-  const captionOverride = document.getElementById('captionInput').value.trim();
-  if (captionOverride) pendingData.caption = captionOverride;
-
-  if (!pendingData.caption) {
-    setStatus('Necesito la caption para analizar.', true);
-    return;
-  }
-
-  const btn = document.getElementById('submitBtn');
-  btn.disabled = true;
-  setStatus('<span class="spinner"></span>Analizando con Claude...');
-
-  try {
-    const r = await fetch('/api/analyze', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify(pendingData),
-    });
-    const analysis = await r.json();
-    if (analysis.error) throw new Error(analysis.error);
-
-    const reel = {
-      id: Date.now().toString(),
-      ...pendingData,
-      added_at: new Date().toISOString(),
-      analysis,
-    };
-    reels.unshift(reel);
-    localStorage.setItem(STORAGE_KEY, JSON.stringify(reels));
+    const data = await res.json();
+    analyses.unshift({ url, ts: Date.now(), ...data });
+    save();
     render();
-
-    // Reset
     document.getElementById('urlInput').value = '';
-    document.getElementById('captionInput').value = '';
-    document.getElementById('captionFallback').style.display = 'none';
-    pendingData = null;
-    setStatus('✅ Análisis guardado');
-    setTimeout(() => setStatus(''), 2000);
-  } catch(e) {
-    setStatus('❌ ' + e.message, true);
+  } catch (e) {
+    setError(e.message);
   } finally {
+    setStatus(null);
     btn.disabled = false;
   }
 }
 
-function deleteReel(id) {
-  if (!confirm('¿Eliminar esta referencia?')) return;
-  reels = reels.filter(r => r.id !== id);
-  localStorage.setItem(STORAGE_KEY, JSON.stringify(reels));
+document.getElementById('urlInput').addEventListener('keydown', e => {
+  if (e.key === 'Enter') analyze();
+});
+
+function deleteEntry(idx) {
+  if (!confirm('¿Eliminar este análisis?')) return;
+  analyses.splice(idx, 1);
+  save();
   render();
 }
 
-function toggleCard(id) {
-  document.getElementById('body-' + id).classList.toggle('open');
-  document.getElementById('chev-' + id).classList.toggle('open');
-}
-
-function renderCard(r) {
-  const a = r.analysis || {};
-  const hookType = a.hook_type || 'otro';
-  const hookLabel = HOOK_LABELS[hookType] || 'Otro';
-  const date = new Date(r.added_at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
-  const preview = r.caption ? r.caption.slice(0, 100) + (r.caption.length > 100 ? '…' : '') : r.url;
-  const thumb = r.thumbnail
-    ? `<img class="card-thumb" src="${r.thumbnail}" alt="" onerror="this.style.display='none'">`
-    : `<div class="card-thumb-placeholder">🎞</div>`;
-  const ns = a.narrative_structure || {};
-
-  return `
-  <div class="card">
-    <div class="card-top" onclick="toggleCard('${r.id}')">
-      ${thumb}
-      <div class="card-info">
-        <div class="card-account">${r.account || 'Sin cuenta'}</div>
-        <div class="card-preview">${preview}</div>
-        <div class="card-meta">
-          <span class="hook-badge hook-${hookType}">${hookLabel}</span>
-          <span class="card-date">${date}</span>
-          ${r.url ? `<a class="card-link" href="${r.url}" target="_blank" onclick="event.stopPropagation()">↗ Ver reel</a>` : ''}
-        </div>
-      </div>
-      <div class="card-actions">
-        <button class="btn-del" onclick="event.stopPropagation();deleteReel('${r.id}')">✕</button>
-        <span class="chevron" id="chev-${r.id}">▾</span>
-      </div>
-    </div>
-
-    <div class="card-body" id="body-${r.id}">
-      <div class="section">
-        <div class="slabel">Cómo funciona el hook</div>
-        <div class="stext">${a.hook_breakdown || '—'}</div>
-      </div>
-      <div class="section">
-        <div class="slabel">Estructura narrativa</div>
-        <div class="narrative">
-          ${['hook','contexto','tension','resolucion','cta'].map(k => ns[k]
-            ? `<div class="nrow"><span class="nlabel">${k.charAt(0).toUpperCase()+k.slice(1)}</span><span>${ns[k]}</span></div>`
-            : '').join('')}
-        </div>
-      </div>
-      <div class="section">
-        <div class="slabel">Por qué funcionó</div>
-        <div class="stext">${a.why_it_worked || '—'}</div>
-      </div>
-      <div class="section vcp-box">
-        <div class="slabel">Adaptación para VCP</div>
-        <div class="stext">${a.vcp_adaptation || '—'}</div>
-      </div>
-    </div>
-  </div>`;
+function esc(str) {
+  return String(str || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/\n/g,'<br>');
 }
 
 function render() {
-  document.getElementById('countEl').textContent = reels.length ? `${reels.length} reel${reels.length!==1?'s':''}` : '';
-  document.getElementById('cardsList').innerHTML = reels.length
-    ? `<div class="cards">${reels.map(renderCard).join('')}</div>`
-    : '<div class="empty">Todavía no hay reels.<br>Pegá un link de Instagram arriba.</div>';
+  const container = document.getElementById('analyses');
+  if (!analyses.length) {
+    container.innerHTML = '<div class="empty">Todavía no analizaste ningún reel.<br>Pegá un link arriba y presioná Analizar.</div>';
+    return;
+  }
+
+  container.innerHTML = analyses.map((a, i) => {
+    const hookLabel = HOOK_LABELS[a.hook_type] || a.hook_type || '—';
+    const narItems = Object.entries(NAR_LABELS).map(([key, label]) => {
+      const val = a.narrative_structure?.[key] || '—';
+      return `<div class="nar-item"><div class="nar-label">${label}</div><div class="nar-text">${esc(val)}</div></div>`;
+    }).join('');
+
+    const visualBlock = a.visual_elements ? `
+      <div>
+        <div class="section-title">Elementos visuales</div>
+        <div class="insight-block">${esc(a.visual_elements)}</div>
+      </div>` : '';
+
+    return `
+    <div class="analysis-card">
+      <div class="card-header">
+        <div class="card-url"><a href="${esc(a.url)}" target="_blank" rel="noopener">${esc(a.url)}</a>${a.isImage ? ' <span style="color:#888">(imagen)</span>' : ''}</div>
+        <div class="card-badge">${esc(hookLabel)}</div>
+      </div>
+      <div class="card-body">
+        <div>
+          <div class="section-title">Hook</div>
+          <div class="hook-block">
+            <div class="hook-type-label">${esc(hookLabel)}</div>
+            <div class="hook-breakdown">${esc(a.hook_breakdown || '—')}</div>
+          </div>
+        </div>
+        <div>
+          <div class="section-title">Estructura narrativa</div>
+          <div class="narrative-grid">${narItems}</div>
+        </div>
+        ${visualBlock}
+        <div>
+          <div class="section-title">Por qué funcionó</div>
+          <div class="insight-block">${esc(a.why_it_worked || '—')}</div>
+        </div>
+        <div class="vcp-block">
+          <div class="vcp-title">Adaptación para VCP</div>
+          <div class="vcp-text">${esc(a.vcp_adaptation || '—')}</div>
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-sm danger" onclick="deleteEntry(${i})">Eliminar</button>
+      </div>
+    </div>`;
+  }).join('');
 }
 
 render();
