@@ -132,7 +132,7 @@ def analyze(file_uri, mime_type):
     }).encode()
 
     req = urllib.request.Request(
-        f'https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key={GEMINI_KEY}',
+        f'https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key={GEMINI_KEY}',
         data=body,
         headers={'Content-Type': 'application/json'},
         method='POST',
