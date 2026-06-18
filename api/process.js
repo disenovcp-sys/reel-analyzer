@@ -6,23 +6,54 @@ function shortcode(url) {
 }
 
 function cleanVideoUrl(raw) {
-  return raw.replace(/\\u0026/g, '&').replace(/\\u003C/g, '<').replace(/\\/g, '');
+  return raw
+    .replace(/\\u0026/g, '&')
+    .replace(/\\u003C/g, '<')
+    .replace(/\\u003E/g, '>')
+    .replace(/\\\//g, '/')
+    .replace(/\\/g, '');
+}
+
+function extractVideoUrl(html) {
+  const patterns = [
+    /"video_url":"(https:[^"]{10,})"/,
+    /"playback_url":"(https:[^"]{10,})"/,
+    /property="og:video"\s+content="([^"]+)"/,
+    /content="([^"]+\.mp4[^"]*)"\s+property="og:video"/,
+    /<video[^>]+src="(https:[^"]+)"/,
+    /"src":"(https:[^"]+\.mp4[^"]*)"/,
+    /videoUrl\s*[:=]\s*"(https:[^"]+)"/,
+    /"dash_manifest_url":"(https:[^"]+)"/,
+  ];
+  for (const pat of patterns) {
+    const m = html.match(pat);
+    if (m) return cleanVideoUrl(m[1]);
+  }
+  return null;
+}
+
+function extractImageUrl(html) {
+  const m = html.match(/property="og:image"\s+content="([^"]+)"/) ||
+            html.match(/content="([^"]+)"\s+property="og:image"/);
+  return m ? cleanVideoUrl(m[1]) : null;
 }
 
 async function fetchVideoBytes(videoUrl) {
-  const r = await fetch(videoUrl, {
-    headers: {
-      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
-      'Referer': 'https://www.instagram.com/',
-    },
-  });
-  if (!r.ok) return null;
-  const ct = r.headers.get('content-type') || 'video/mp4';
-  const buf = Buffer.from(await r.arrayBuffer());
-  return { buf, contentType: ct };
+  try {
+    const r = await fetch(videoUrl, {
+      headers: {
+        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+        'Referer': 'https://www.instagram.com/',
+      },
+    });
+    if (!r.ok) return null;
+    const ct = r.headers.get('content-type') || 'video/mp4';
+    const buf = Buffer.from(await r.arrayBuffer());
+    return { buf, contentType: ct };
+  } catch (_) { return null; }
 }
 
-// Strategy 1: Cobalt — free service for social media video download
+// Strategy 1: Cobalt — handles the picker response too
 async function viaCobalt(igUrl) {
   try {
     const r = await fetch('https://api.cobalt.tools/', {
@@ -30,62 +61,85 @@ async function viaCobalt(igUrl) {
       headers: {
         'Content-Type': 'application/json',
         'Accept': 'application/json',
-        'User-Agent': 'ReelAnalyzer/1.0',
+        'User-Agent': 'Mozilla/5.0 (compatible; ReelAnalyzer/1.0)',
       },
       body: JSON.stringify({ url: igUrl }),
     });
     if (!r.ok) return null;
     const data = await r.json();
-    if (data.status === 'error' || !data.url) return null;
-    return fetchVideoBytes(data.url);
+    if (data.status === 'error') return null;
+    // redirect or tunnel → direct URL
+    if (data.url) return fetchVideoBytes(data.url);
+    // picker → take first video item
+    if (data.status === 'picker' && data.picker) {
+      const item = data.picker.find(p => p.type === 'video') || data.picker[0];
+      if (item?.url) return fetchVideoBytes(item.url);
+    }
+    return null;
   } catch (_) { return null; }
 }
 
-// Strategy 2: Instagram embed page — parse script tags for video_url
+// Strategy 2: Route through a CORS/web proxy to bypass Vercel IP block
+async function viaProxy(code) {
+  const igEmbedUrl = `https://www.instagram.com/reel/${code}/embed/captioned/`;
+  const proxies = [
+    `https://api.allorigins.win/raw?url=${encodeURIComponent(igEmbedUrl)}`,
+    `https://corsproxy.io/?${encodeURIComponent(igEmbedUrl)}`,
+    `https://api.codetabs.com/v1/proxy?quest=${encodeURIComponent(igEmbedUrl)}`,
+  ];
+  for (const proxyUrl of proxies) {
+    try {
+      const r = await fetch(proxyUrl, {
+        headers: { 'User-Agent': 'Mozilla/5.0 (compatible; ReelAnalyzer/1.0)' },
+        signal: AbortSignal.timeout(10000),
+      });
+      if (!r.ok) continue;
+      const html = await r.text();
+      const videoUrl = extractVideoUrl(html);
+      if (videoUrl) {
+        const result = await fetchVideoBytes(videoUrl);
+        if (result) return result;
+      }
+      // Image fallback from proxy
+      const imgUrl = extractImageUrl(html);
+      if (imgUrl) {
+        const ir = await fetch(imgUrl);
+        if (ir.ok) {
+          const buf = Buffer.from(await ir.arrayBuffer());
+          return { buf, contentType: 'image/jpeg', isImage: true };
+        }
+      }
+    } catch (_) {}
+  }
+  return null;
+}
+
+// Strategy 3: Direct embed (works when Vercel IPs aren't fully blocked)
 async function viaEmbed(code) {
   const endpoints = [
     `https://www.instagram.com/reel/${code}/embed/captioned/`,
     `https://www.instagram.com/reel/${code}/embed/`,
     `https://www.instagram.com/p/${code}/embed/`,
   ];
-  const headers = {
-    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
-    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
-    'Accept-Language': 'en-US,en;q=0.9',
-    'Sec-Fetch-Dest': 'document',
-    'Sec-Fetch-Mode': 'navigate',
-    'Sec-Fetch-Site': 'none',
-  };
-
   for (const ep of endpoints) {
     try {
-      const r = await fetch(ep, { headers });
+      const r = await fetch(ep, {
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+          'Accept': 'text/html,application/xhtml+xml',
+          'Accept-Language': 'en-US,en;q=0.9',
+        },
+      });
       if (!r.ok) continue;
       const html = await r.text();
-
-      const patterns = [
-        /"video_url":"(https:[^"]+\.mp4[^"]*)"/,
-        /"playback_url":"(https:[^"]+\.mp4[^"]*)"/,
-        /property="og:video"\s+content="([^"]+)"/,
-        /content="([^"]+\.mp4[^"]*)"\s+property="og:video"/,
-        /<video[^>]+src="([^"]+)"/,
-        /"src":"(https:[^"]+\.mp4[^"]*)"/,
-        /CDNNode[^}]+"url":"(https:[^"]+\.mp4[^"]*)"/,
-      ];
-
-      for (const pat of patterns) {
-        const m = html.match(pat);
-        if (m) {
-          const result = await fetchVideoBytes(cleanVideoUrl(m[1]));
-          if (result) return result;
-        }
+      const videoUrl = extractVideoUrl(html);
+      if (videoUrl) {
+        const result = await fetchVideoBytes(videoUrl);
+        if (result) return result;
       }
-
-      // Image fallback — at least gives Gemini something to analyze
-      const imgMatch = html.match(/property="og:image"\s+content="([^"]+)"/) ||
-                       html.match(/content="([^"]+)"\s+property="og:image"/);
-      if (imgMatch) {
-        const ir = await fetch(cleanVideoUrl(imgMatch[1]));
+      const imgUrl = extractImageUrl(html);
+      if (imgUrl) {
+        const ir = await fetch(imgUrl);
         if (ir.ok) {
           const buf = Buffer.from(await ir.arrayBuffer());
           return { buf, contentType: 'image/jpeg', isImage: true };
@@ -97,9 +151,9 @@ async function viaEmbed(code) {
 }
 
 async function downloadVideo(igUrl, code) {
-  const result = await viaCobalt(igUrl);
-  if (result) return result;
-  return viaEmbed(code);
+  return (await viaCobalt(igUrl)) ||
+         (await viaProxy(code)) ||
+         (await viaEmbed(code));
 }
 
 async function uploadToGemini(buf, contentType) {
