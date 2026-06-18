@@ -5,52 +5,87 @@ function shortcode(url) {
   return m ? m[2] : null;
 }
 
-async function downloadVideo(code) {
-  // Try Instagram's internal API with mobile headers
+function cleanVideoUrl(raw) {
+  return raw.replace(/\\u0026/g, '&').replace(/\\u003C/g, '<').replace(/\\/g, '');
+}
+
+async function fetchVideoBytes(videoUrl) {
+  const r = await fetch(videoUrl, {
+    headers: {
+      'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1',
+      'Referer': 'https://www.instagram.com/',
+    },
+  });
+  if (!r.ok) return null;
+  const ct = r.headers.get('content-type') || 'video/mp4';
+  const buf = Buffer.from(await r.arrayBuffer());
+  return { buf, contentType: ct };
+}
+
+// Strategy 1: Cobalt — free service for social media video download
+async function viaCobalt(igUrl) {
+  try {
+    const r = await fetch('https://api.cobalt.tools/', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Accept': 'application/json',
+        'User-Agent': 'ReelAnalyzer/1.0',
+      },
+      body: JSON.stringify({ url: igUrl }),
+    });
+    if (!r.ok) return null;
+    const data = await r.json();
+    if (data.status === 'error' || !data.url) return null;
+    return fetchVideoBytes(data.url);
+  } catch (_) { return null; }
+}
+
+// Strategy 2: Instagram embed page — parse script tags for video_url
+async function viaEmbed(code) {
   const endpoints = [
+    `https://www.instagram.com/reel/${code}/embed/captioned/`,
     `https://www.instagram.com/reel/${code}/embed/`,
     `https://www.instagram.com/p/${code}/embed/`,
   ];
+  const headers = {
+    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+    'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
+    'Accept-Language': 'en-US,en;q=0.9',
+    'Sec-Fetch-Dest': 'document',
+    'Sec-Fetch-Mode': 'navigate',
+    'Sec-Fetch-Site': 'none',
+  };
 
   for (const ep of endpoints) {
     try {
-      const r = await fetch(ep, {
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/16.0 Mobile/15E148 Safari/604.1',
-          'Accept': 'text/html,application/xhtml+xml',
-          'Accept-Language': 'es-AR,es;q=0.9',
-          'Referer': 'https://www.instagram.com/',
-        },
-      });
+      const r = await fetch(ep, { headers });
       if (!r.ok) continue;
       const html = await r.text();
 
-      // Extract video URL from embed page
       const patterns = [
-        /"video_url":"([^"]+)"/,
+        /"video_url":"(https:[^"]+\.mp4[^"]*)"/,
+        /"playback_url":"(https:[^"]+\.mp4[^"]*)"/,
         /property="og:video"\s+content="([^"]+)"/,
+        /content="([^"]+\.mp4[^"]*)"\s+property="og:video"/,
         /<video[^>]+src="([^"]+)"/,
-        /CDNNode",url:"([^"]+\.mp4[^"]*)"/,
+        /"src":"(https:[^"]+\.mp4[^"]*)"/,
+        /CDNNode[^}]+"url":"(https:[^"]+\.mp4[^"]*)"/,
       ];
+
       for (const pat of patterns) {
         const m = html.match(pat);
         if (m) {
-          const videoUrl = m[1].replace(/\\u0026/g, '&').replace(/\\/g, '');
-          const vr = await fetch(videoUrl, {
-            headers: { 'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 16_0)' },
-          });
-          if (vr.ok) {
-            const buf = Buffer.from(await vr.arrayBuffer());
-            const ct = vr.headers.get('content-type') || 'video/mp4';
-            return { buf, contentType: ct };
-          }
+          const result = await fetchVideoBytes(cleanVideoUrl(m[1]));
+          if (result) return result;
         }
       }
 
-      // Try thumbnail/image if no video found
-      const imgMatch = html.match(/property="og:image"\s+content="([^"]+)"/);
+      // Image fallback — at least gives Gemini something to analyze
+      const imgMatch = html.match(/property="og:image"\s+content="([^"]+)"/) ||
+                       html.match(/content="([^"]+)"\s+property="og:image"/);
       if (imgMatch) {
-        const ir = await fetch(imgMatch[1]);
+        const ir = await fetch(cleanVideoUrl(imgMatch[1]));
         if (ir.ok) {
           const buf = Buffer.from(await ir.arrayBuffer());
           return { buf, contentType: 'image/jpeg', isImage: true };
@@ -59,6 +94,12 @@ async function downloadVideo(code) {
     } catch (_) {}
   }
   return null;
+}
+
+async function downloadVideo(igUrl, code) {
+  const result = await viaCobalt(igUrl);
+  if (result) return result;
+  return viaEmbed(code);
 }
 
 async function uploadToGemini(buf, contentType) {
@@ -184,7 +225,7 @@ export default async function handler(req, res) {
 
   try {
     // 1. Download media from Instagram
-    const media = await downloadVideo(code);
+    const media = await downloadVideo(url, code);
     if (!media) return res.status(422).json({ error: 'No se pudo descargar el video. Instagram puede haber bloqueado la descarga — intentá con un reel público.' });
 
     // 2. Upload to Gemini File API
