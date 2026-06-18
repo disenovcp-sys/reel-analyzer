@@ -1,0 +1,305 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Reel Analyzer — VCP</title>
+<link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><text y='28' font-size='28'>🎞</text></svg>">
+<style>
+:root{--bg:#0a0a0f;--surface:#111118;--surface2:#1a1a24;--border:rgba(255,255,255,0.07);--purple:#a78bfa;--blue:#8ab4f8;--green:#6ee7b7;--yellow:#fcd34d;--orange:#fb923c;--red:#f87171;--text:#e8e8f0;--muted:#6b6b80;}
+*{box-sizing:border-box;margin:0;padding:0;}
+body{background:var(--bg);color:var(--text);font-family:'DM Sans',system-ui,sans-serif;min-height:100vh;padding:32px 20px;max-width:860px;margin:0 auto;}
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600&family=DM+Mono:wght@400;500&display=swap');
+
+/* Header */
+.header{display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:28px;}
+h1{font-size:22px;font-weight:600;}
+.subtitle{color:var(--muted);font-size:13px;margin-top:3px;}
+.btn-ghost{background:none;border:1px solid var(--border);color:var(--muted);border-radius:8px;padding:6px 12px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;white-space:nowrap;}
+.btn-ghost:hover{border-color:var(--purple);color:var(--purple);}
+
+/* URL input */
+.url-form{background:var(--surface);border:1px solid var(--border);border-radius:16px;padding:20px;margin-bottom:24px;}
+.url-row{display:flex;gap:10px;}
+.url-input{flex:1;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:10px;padding:12px 16px;font-size:14px;font-family:inherit;outline:none;transition:border-color .2s;}
+.url-input:focus{border-color:var(--purple);}
+.url-input::placeholder{color:var(--muted);}
+.btn-primary{background:var(--purple);color:#fff;border:none;border-radius:10px;padding:12px 20px;font-size:14px;font-weight:600;cursor:pointer;font-family:inherit;transition:opacity .2s;white-space:nowrap;}
+.btn-primary:hover{opacity:.85;}
+.btn-primary:disabled{opacity:.4;cursor:not-allowed;}
+.url-status{margin-top:12px;font-size:12px;color:var(--muted);min-height:16px;}
+.url-status.error{color:var(--red);}
+
+/* Caption fallback */
+.caption-fallback{margin-top:14px;display:none;}
+.caption-fallback label{font-size:11px;color:var(--muted);display:block;margin-bottom:6px;text-transform:uppercase;letter-spacing:.06em;font-family:'DM Mono',monospace;}
+.caption-fallback textarea{width:100%;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:10px 12px;font-size:13px;font-family:inherit;outline:none;resize:vertical;min-height:80px;transition:border-color .2s;}
+.caption-fallback textarea:focus{border-color:var(--purple);}
+.caption-fallback .btn-sm{margin-top:8px;background:var(--surface2);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:7px 14px;font-size:12px;cursor:pointer;font-family:inherit;transition:all .2s;}
+.caption-fallback .btn-sm:hover{border-color:var(--purple);color:var(--purple);}
+
+/* Hook type badges */
+.hook-badge{display:inline-block;font-size:10px;padding:3px 10px;border-radius:10px;font-weight:600;letter-spacing:.05em;text-transform:uppercase;font-family:'DM Mono',monospace;}
+.hook-curiosity_gap{background:rgba(167,139,250,.15);color:var(--purple);}
+.hook-dato_contraintuitivo{background:rgba(248,113,113,.15);color:var(--red);}
+.hook-promesa_revelacion{background:rgba(110,231,183,.15);color:var(--green);}
+.hook-conflicto{background:rgba(251,146,60,.15);color:var(--orange);}
+.hook-identificacion{background:rgba(138,180,248,.15);color:var(--blue);}
+.hook-otro{background:rgba(107,107,128,.15);color:var(--muted);}
+
+const HOOK_LABELS={curiosity_gap:'Curiosity gap',dato_contraintuitivo:'Dato contraintuitivo',promesa_revelacion:'Promesa revelación',conflicto:'Conflicto',identificacion:'Identificación',otro:'Otro'};
+
+/* Cards */
+.section-header{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px;}
+.section-header h2{font-size:15px;font-weight:600;}
+.count{font-size:12px;color:var(--muted);}
+.empty{text-align:center;padding:60px 20px;color:var(--muted);font-size:14px;line-height:1.6;}
+.cards{display:flex;flex-direction:column;gap:12px;}
+
+.card{background:var(--surface);border:1px solid var(--border);border-radius:14px;overflow:hidden;transition:border-color .2s;}
+.card:hover{border-color:rgba(167,139,250,.2);}
+.card-top{display:grid;grid-template-columns:auto 1fr auto;gap:14px;padding:16px 18px;cursor:pointer;align-items:start;}
+.card-thumb{width:56px;height:56px;border-radius:8px;object-fit:cover;background:var(--surface2);flex-shrink:0;}
+.card-thumb-placeholder{width:56px;height:56px;border-radius:8px;background:var(--surface2);display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;}
+.card-info{min-width:0;}
+.card-account{font-size:11px;color:var(--muted);font-family:'DM Mono',monospace;margin-bottom:5px;}
+.card-preview{font-size:13px;font-weight:500;line-height:1.4;margin-bottom:7px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.card-meta{display:flex;gap:8px;align-items:center;flex-wrap:wrap;}
+.card-date{font-size:11px;color:var(--muted);}
+.card-link{font-size:11px;color:var(--muted);text-decoration:none;}
+.card-link:hover{color:var(--purple);}
+.card-actions{display:flex;gap:6px;align-items:center;}
+.btn-del{background:none;border:1px solid var(--border);color:var(--muted);border-radius:6px;padding:4px 8px;font-size:11px;cursor:pointer;transition:all .2s;}
+.btn-del:hover{border-color:var(--red);color:var(--red);}
+.chevron{font-size:12px;color:var(--muted);transition:transform .2s;display:block;}
+.chevron.open{transform:rotate(180deg);}
+
+.card-body{border-top:1px solid var(--border);padding:18px 20px;display:none;}
+.card-body.open{display:block;}
+.section{margin-bottom:16px;}
+.section:last-child{margin-bottom:0;}
+.slabel{font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:.1em;font-family:'DM Mono',monospace;margin-bottom:6px;}
+.stext{font-size:13px;color:var(--text);line-height:1.6;}
+.narrative{display:flex;flex-direction:column;gap:6px;}
+.nrow{display:flex;gap:12px;font-size:13px;}
+.nlabel{font-size:10px;font-family:'DM Mono',monospace;color:var(--muted);text-transform:uppercase;white-space:nowrap;padding-top:2px;min-width:85px;}
+.vcp-box{background:rgba(167,139,250,.06);border:1px solid rgba(167,139,250,.2);border-radius:10px;padding:14px 16px;}
+.vcp-box .slabel{color:var(--purple);}
+
+/* Spinner */
+@keyframes spin{to{transform:rotate(360deg)}}
+.spinner{display:inline-block;width:12px;height:12px;border:2px solid rgba(167,139,250,.3);border-top-color:var(--purple);border-radius:50%;animation:spin .7s linear infinite;vertical-align:middle;margin-right:6px;}
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>🎞 Reel Analyzer</h1>
+    <p class="subtitle">Pegá un link de Instagram — se analiza solo.</p>
+  </div>
+</div>
+
+<div class="url-form">
+  <div class="url-row">
+    <input class="url-input" id="urlInput" type="url" placeholder="https://www.instagram.com/reel/..."
+      onkeydown="if(event.key==='Enter')submitUrl()">
+    <button class="btn-primary" id="submitBtn" onclick="submitUrl()">Analizar</button>
+  </div>
+  <div class="url-status" id="urlStatus"></div>
+
+  <div class="caption-fallback" id="captionFallback">
+    <label>No encontré la caption automáticamente — pegala acá:</label>
+    <textarea id="captionInput" placeholder="Copiá la caption del reel de Instagram y pegala acá..."></textarea>
+    <button class="btn-sm" onclick="runAnalysis()">Analizar con esta caption</button>
+  </div>
+</div>
+
+<div class="section-header">
+  <h2>Referencias</h2>
+  <span class="count" id="countEl"></span>
+</div>
+<div id="cardsList"></div>
+
+<script>
+const STORAGE_KEY = 'reel_analyzer_v2';
+const HOOK_LABELS = {
+  curiosity_gap:'Curiosity gap', dato_contraintuitivo:'Dato contraintuitivo',
+  promesa_revelacion:'Promesa revelación', conflicto:'Conflicto',
+  identificacion:'Identificación', otro:'Otro'
+};
+
+let reels = JSON.parse(localStorage.getItem(STORAGE_KEY) || '[]');
+let pendingData = null; // scraped data waiting for manual caption
+
+function setStatus(msg, isError) {
+  const el = document.getElementById('urlStatus');
+  el.innerHTML = msg;
+  el.className = 'url-status' + (isError ? ' error' : '');
+}
+
+async function submitUrl() {
+  const url = document.getElementById('urlInput').value.trim();
+  if (!url) return;
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  document.getElementById('captionFallback').style.display = 'none';
+  setStatus('<span class="spinner"></span>Scrapeando Instagram...');
+
+  try {
+    const r = await fetch('/api/scrape', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ url }),
+    });
+    const scraped = await r.json();
+    if (scraped.error) throw new Error(scraped.error);
+
+    pendingData = scraped;
+
+    if (scraped.caption) {
+      setStatus('<span class="spinner"></span>Caption encontrada — analizando...');
+      await runAnalysis();
+    } else {
+      setStatus('⚠️ No pude extraer la caption automáticamente.');
+      document.getElementById('captionFallback').style.display = 'block';
+      document.getElementById('captionInput').focus();
+      btn.disabled = false;
+    }
+  } catch(e) {
+    setStatus('❌ ' + e.message, true);
+    btn.disabled = false;
+  }
+}
+
+async function runAnalysis() {
+  if (!pendingData) {
+    // Called from fallback button
+    const url = document.getElementById('urlInput').value.trim();
+    pendingData = { url, account: '', caption: '', thumbnail: '' };
+  }
+
+  const captionOverride = document.getElementById('captionInput').value.trim();
+  if (captionOverride) pendingData.caption = captionOverride;
+
+  if (!pendingData.caption) {
+    setStatus('Necesito la caption para analizar.', true);
+    return;
+  }
+
+  const btn = document.getElementById('submitBtn');
+  btn.disabled = true;
+  setStatus('<span class="spinner"></span>Analizando con Claude...');
+
+  try {
+    const r = await fetch('/api/analyze', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(pendingData),
+    });
+    const analysis = await r.json();
+    if (analysis.error) throw new Error(analysis.error);
+
+    const reel = {
+      id: Date.now().toString(),
+      ...pendingData,
+      added_at: new Date().toISOString(),
+      analysis,
+    };
+    reels.unshift(reel);
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(reels));
+    render();
+
+    // Reset
+    document.getElementById('urlInput').value = '';
+    document.getElementById('captionInput').value = '';
+    document.getElementById('captionFallback').style.display = 'none';
+    pendingData = null;
+    setStatus('✅ Análisis guardado');
+    setTimeout(() => setStatus(''), 2000);
+  } catch(e) {
+    setStatus('❌ ' + e.message, true);
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function deleteReel(id) {
+  if (!confirm('¿Eliminar esta referencia?')) return;
+  reels = reels.filter(r => r.id !== id);
+  localStorage.setItem(STORAGE_KEY, JSON.stringify(reels));
+  render();
+}
+
+function toggleCard(id) {
+  document.getElementById('body-' + id).classList.toggle('open');
+  document.getElementById('chev-' + id).classList.toggle('open');
+}
+
+function renderCard(r) {
+  const a = r.analysis || {};
+  const hookType = a.hook_type || 'otro';
+  const hookLabel = HOOK_LABELS[hookType] || 'Otro';
+  const date = new Date(r.added_at).toLocaleDateString('es-AR',{day:'2-digit',month:'2-digit',year:'numeric'});
+  const preview = r.caption ? r.caption.slice(0, 100) + (r.caption.length > 100 ? '…' : '') : r.url;
+  const thumb = r.thumbnail
+    ? `<img class="card-thumb" src="${r.thumbnail}" alt="" onerror="this.style.display='none'">`
+    : `<div class="card-thumb-placeholder">🎞</div>`;
+  const ns = a.narrative_structure || {};
+
+  return `
+  <div class="card">
+    <div class="card-top" onclick="toggleCard('${r.id}')">
+      ${thumb}
+      <div class="card-info">
+        <div class="card-account">${r.account || 'Sin cuenta'}</div>
+        <div class="card-preview">${preview}</div>
+        <div class="card-meta">
+          <span class="hook-badge hook-${hookType}">${hookLabel}</span>
+          <span class="card-date">${date}</span>
+          ${r.url ? `<a class="card-link" href="${r.url}" target="_blank" onclick="event.stopPropagation()">↗ Ver reel</a>` : ''}
+        </div>
+      </div>
+      <div class="card-actions">
+        <button class="btn-del" onclick="event.stopPropagation();deleteReel('${r.id}')">✕</button>
+        <span class="chevron" id="chev-${r.id}">▾</span>
+      </div>
+    </div>
+
+    <div class="card-body" id="body-${r.id}">
+      <div class="section">
+        <div class="slabel">Cómo funciona el hook</div>
+        <div class="stext">${a.hook_breakdown || '—'}</div>
+      </div>
+      <div class="section">
+        <div class="slabel">Estructura narrativa</div>
+        <div class="narrative">
+          ${['hook','contexto','tension','resolucion','cta'].map(k => ns[k]
+            ? `<div class="nrow"><span class="nlabel">${k.charAt(0).toUpperCase()+k.slice(1)}</span><span>${ns[k]}</span></div>`
+            : '').join('')}
+        </div>
+      </div>
+      <div class="section">
+        <div class="slabel">Por qué funcionó</div>
+        <div class="stext">${a.why_it_worked || '—'}</div>
+      </div>
+      <div class="section vcp-box">
+        <div class="slabel">Adaptación para VCP</div>
+        <div class="stext">${a.vcp_adaptation || '—'}</div>
+      </div>
+    </div>
+  </div>`;
+}
+
+function render() {
+  document.getElementById('countEl').textContent = reels.length ? `${reels.length} reel${reels.length!==1?'s':''}` : '';
+  document.getElementById('cardsList').innerHTML = reels.length
+    ? `<div class="cards">${reels.map(renderCard).join('')}</div>`
+    : '<div class="empty">Todavía no hay reels.<br>Pegá un link de Instagram arriba.</div>';
+}
+
+render();
+</script>
+</body>
+</html>
